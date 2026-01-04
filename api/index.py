@@ -10,6 +10,10 @@ DB_PATH = os.path.join(BASE_DIR, "..", "db", "energy.duckdb")
 def get_conn():
     return duckdb.connect(DB_PATH, read_only=True)
 
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
+
 # -----------------------------
 # PRICE DATA
 # -----------------------------
@@ -23,7 +27,7 @@ def price_data():
             value,
             units,
             "product-name"
-        FROM price
+        FROM energy.main.price
         WHERE benchmark IN ('Brent', 'WTI', 'Henry Hub')
         ORDER BY period
     """).fetchdf()
@@ -42,7 +46,7 @@ def prod_cons():
             Year,
             SUM(Production) AS Production,
             'Oil' AS Energy
-        FROM oil_prod
+        FROM energy.main.oil_prod
         GROUP BY Year
     """).fetchdf()
 
@@ -50,7 +54,7 @@ def prod_cons():
         SELECT
             Year,
             SUM(Consumtion) AS Consumtion
-        FROM oil_cons
+        FROM energy.main.oil_cons
         GROUP BY Year
     """).fetchdf()
 
@@ -61,7 +65,7 @@ def prod_cons():
             Year,
             SUM(Production) AS Production,
             'Gas' AS Energy
-        FROM gas_prod
+        FROM energy.main.gas_prod
         GROUP BY Year
     """).fetchdf()
 
@@ -69,7 +73,7 @@ def prod_cons():
         SELECT
             Year,
             SUM(Consumtion) AS Consumtion
-        FROM gas_cons
+        FROM energy.main.gas_cons
         GROUP BY Year
     """).fetchdf()
 
