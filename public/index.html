@@ -1,57 +1,118 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Global Energy Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <meta charset="UTF-8" />
+  <title>Energy Dashboard</title>
+
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #0e1117;
+      color: white;
+    }
+    .card {
+      background: #161b22;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    select {
+      padding: 6px;
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
+
 <body>
 
-<h1>🌍 Global Energy Dashboard</h1>
-<small>Oil, Gas & Energy Visualization – Prototype</small>
+<h2>🌍 Energy Dashboard</h2>
 
-<hr>
-
-<div class="grid-3">
-
-  <!-- PRICE -->
-  <div class="card">
-    <h3>🛢️ Global Oil Price Comparison</h3>
-    <div id="priceChart"></div>
-    <button onclick="alert('Detail page')">View more...</button>
-  </div>
-
-  <!-- PROD vs CONS -->
-  <div class="card">
-    <h3>🏭 Global Production vs Consumption</h3>
-
-    <button id="oilBtn" class="primary" onclick="setEnergy('Oil')">Oil</button>
-    <button id="gasBtn" onclick="setEnergy('Gas')">Gas</button>
-
-    <small id="energyLabel"></small>
-
-    <div id="prodConsChart"></div>
-    <button onclick="alert('Detail page')">View more...</button>
-  </div>
-
-  <!-- SUBSIDY -->
-  <div class="card">
-    <h3>⛽ Fuel Subsidy vs GDP (Dummy)</h3>
-    <div id="subsidyChart"></div>
-  </div>
-
+<div class="card">
+  <h3>Oil & Gas Price</h3>
+  <div id="priceChart"></div>
 </div>
 
-<hr>
+<div class="card">
+  <h3>Global Production vs Consumption</h3>
+  <select id="energySelect">
+    <option value="oil">Oil</option>
+    <option value="gas">Gas</option>
+  </select>
+  <div id="prodConsChart"></div>
+</div>
 
-<h3>🗺️ Global Energy Production Map (Dummy)</h3>
-<div id="mapChart"></div>
+<script>
+const API = "/api";
 
-<hr>
+// ---------------- PRICE ----------------
+fetch(`${API}/price`)
+  .then(r => r.json())
+  .then(data => {
+    const groups = {};
 
-<h3>📰 Global Migas News & Analysis</h3>
-<div id="news"></div>
+    data.forEach(d => {
+      if (!groups[d.benchmark]) groups[d.benchmark] = [];
+      groups[d.benchmark].push(d);
+    });
 
-<script src="app.js"></script>
+    const traces = Object.keys(groups).map(name => ({
+      x: groups[name].map(d => d.period),
+      y: groups[name].map(d => d.value),
+      name,
+      mode: "lines",
+      opacity: 0.6
+    }));
+
+    Plotly.newPlot("priceChart", traces, {
+      height: 300,
+      paper_bgcolor: "#161b22",
+      plot_bgcolor: "#161b22",
+      font: { color: "white" },
+      legend: { title: { text: "Click to focus" } }
+    });
+  });
+
+// ---------------- PROD vs CONS ----------------
+const select = document.getElementById("energySelect");
+
+function loadProdCons(type) {
+  fetch(`${API}/prod-cons`)
+    .then(r => r.json())
+    .then(data => {
+      const d = data[type];
+
+      const traces = [
+        {
+          x: d.map(i => i.Year),
+          y: d.map(i => i.Production),
+          name: "Production",
+          mode: "lines",
+          opacity: 0.8
+        },
+        {
+          x: d.map(i => i.Year),
+          y: d.map(i => i.Consumtion),
+          name: "Consumption",
+          mode: "lines",
+          opacity: 0.4
+        }
+      ];
+
+      Plotly.newPlot("prodConsChart", traces, {
+        height: 300,
+        paper_bgcolor: "#161b22",
+        plot_bgcolor: "#161b22",
+        font: { color: "white" }
+      });
+    });
+}
+
+select.addEventListener("change", e => loadProdCons(e.target.value));
+loadProdCons("oil");
+</script>
+
 </body>
 </html>
