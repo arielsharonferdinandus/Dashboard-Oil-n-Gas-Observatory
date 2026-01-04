@@ -1,73 +1,83 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from api.db import query
+import duckdb
+import os
 
 app = FastAPI()
 
-# CORS for frontend JS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "..", "db", "energy.duckdb")
 
-@app.get("/")
-def health():
-    return {"status": "ok"}
+def get_conn():
+    return duckdb.connect(DB_PATH, read_only=True)
 
 # -----------------------------
 # PRICE DATA
 # -----------------------------
 @app.get("/api/price")
 def price_data():
-    df = query("""
+    con = get_conn()
+    df = con.execute("""
         SELECT
             period,
             benchmark,
-            value
+            value,
+            units,
+            "product-name"
         FROM price
         WHERE benchmark IN ('Brent', 'WTI', 'Henry Hub')
         ORDER BY period
-    """)
-
-    if df.empty:
-        return [
-            {"period": "2020", "benchmark": "Brent", "value": 50},
-            {"period": "2020", "benchmark": "WTI", "value": 45},
-            {"period": "2020", "benchmark": "Henry Hub", "value": 3},
-        ]
-
+    """).fetchdf()
+    con.close()
     return df.to_dict(orient="records")
 
 # -----------------------------
-# PRODUCTION vs CONSUMPTION
+# GLOBAL PROD vs CONS
 # -----------------------------
 @app.get("/api/prod-cons")
 def prod_cons():
-    oil = query("""
-        SELECT
-            p.Year,
-            p.Production,
-            c.Consumtion,
-            'Oil' AS Energy
-        FROM oil_prod p
-        LEFT JOIN oil_cons c ON p.Year = c.Year
-        ORDER BY p.Year
-    """)
+    con = get_conn()
 
-    gas = query("""
+    oil = con.execute("""
         SELECT
-            p.Year,
-            p.Production,
-            c.Consumtion,
+            Year,
+            SUM(Production) AS Production,
+            'Oil' AS Energy
+        FROM oil_prod
+        GROUP BY Year
+    """).fetchdf()
+
+    oil_cons = con.execute("""
+        SELECT
+            Year,
+            SUM(Consumtion) AS Consumtion
+        FROM oil_cons
+        GROUP BY Year
+    """).fetchdf()
+
+    oil = oil.merge(oil_cons, on="Year", how="left")
+
+    gas = con.execute("""
+        SELECT
+            Year,
+            SUM(Production) AS Production,
             'Gas' AS Energy
-        FROM gas_prod p
-        LEFT JOIN gas_cons c ON p.Year = c.Year
-        ORDER BY p.Year
-    """)
+        FROM gas_prod
+        GROUP BY Year
+    """).fetchdf()
+
+    gas_cons = con.execute("""
+        SELECT
+            Year,
+            SUM(Consumtion) AS Consumtion
+        FROM gas_cons
+        GROUP BY Year
+    """).fetchdf()
+
+    gas = gas.merge(gas_cons, on="Year", how="left")
+
+    con.close()
 
     return {
         "oil": oil.fillna(0).to_dict(orient="records"),
-        "gas": gas.fillna(0).to_dict(orient="records"),
+        "gas": gas.fillna(0).to_dict(orient="records")
     }
