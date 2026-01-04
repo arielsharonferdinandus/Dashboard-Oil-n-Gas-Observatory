@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Global Energy Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+
+<h1>🌍 Global Energy Dashboard</h1>
+<small>Oil, Gas & Energy Visualization – Prototype</small>
+
+<hr>
+
+<div class="grid-3">
+
+  <!-- PRICE -->
+  <div class="card">
+    <h3>🛢️ Global Oil Price Comparison</h3>
+    <div id="priceChart"></div>
+    <button onclick="alert('Detail page')">View more...</button>
+  </div>
+
+  <!-- PROD vs CONS -->
+  <div class="card">
+    <h3>🏭 Global Production vs Consumption</h3>
+
+    <button id="oilBtn" class="primary" onclick="setEnergy('Oil')">Oil</button>
+    <button id="gasBtn" onclick="setEnergy('Gas')">Gas</button>
+
+    <small id="energyLabel"></small>
+
+    <div id="prodConsChart"></div>
+    <button onclick="alert('Detail page')">View more...</button>
+  </div>
+
+  <!-- SUBSIDY -->
+  <div class="card">
+    <h3>⛽ Fuel Subsidy vs GDP (Dummy)</h3>
+    <div id="subsidyChart"></div>
+  </div>
+
+</div>
+
+<hr>
+
+<h3>🗺️ Global Energy Production Map (Dummy)</h3>
+<div id="mapChart"></div>
+
+<hr>
+
+<h3>📰 Global Migas News & Analysis</h3>
+<div id="news"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
